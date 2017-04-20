@@ -134,7 +134,10 @@ func (p *Prospector) Prepare() error {
 }
 
 func (p *Prospector) Start() {
-
+	if !p.prepared {
+		logp.Err("Tried to start prospector without preparing it: %v", p.ID())
+		return
+	}
 	p.wg.Add(1)
 	logp.Info("Starting prospector of type: %v; id: %v ", p.config.InputType, p.ID())
 

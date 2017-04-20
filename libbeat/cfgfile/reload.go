@@ -167,7 +167,10 @@ func (rl *Reloader) startRunners(list map[uint64]Runner) {
 
 	logp.Info("Starting %v runners ...", len(list))
 	for id, runner := range list {
-		runner.Prepare()
+		if err := runner.Prepare(); err != nil {
+			logp.Err("Failed to prepare runner: %v", id)
+			continue
+		}
 		runner.Start()
 		rl.registry.Add(id, runner)
 
