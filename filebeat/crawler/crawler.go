@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/elastic/beats/filebeat/input/file"
 	"github.com/elastic/beats/filebeat/prospector"
 	"github.com/elastic/beats/filebeat/registrar"
 	"github.com/elastic/beats/libbeat/cfgfile"
@@ -39,7 +38,7 @@ func (c *Crawler) Start(r *registrar.Registrar, reloaderConfig *common.Config) e
 
 	// Prospect the globs/paths given on the command line and launch harvesters
 	for _, prospectorConfig := range c.prospectorConfigs {
-		err := c.startProspector(prospectorConfig, r.GetStates())
+		err := c.startProspector(prospectorConfig, r)
 		if err != nil {
 			return err
 		}
@@ -60,11 +59,11 @@ func (c *Crawler) Start(r *registrar.Registrar, reloaderConfig *common.Config) e
 	return nil
 }
 
-func (c *Crawler) startProspector(config *common.Config, states []file.State) error {
+func (c *Crawler) startProspector(config *common.Config, registrar *registrar.Registrar) error {
 	if !config.Enabled() {
 		return nil
 	}
-	p, err := prospector.NewProspector(config, c.out, c.beatDone)
+	p, err := prospector.NewProspector(config, c.out, registrar, c.beatDone)
 	if err != nil {
 		return fmt.Errorf("Error in initing prospector: %s", err)
 	}
@@ -74,7 +73,7 @@ func (c *Crawler) startProspector(config *common.Config, states []file.State) er
 		return fmt.Errorf("Prospector with same ID already exists: %v", p.ID())
 	}
 
-	err = p.LoadStates(states)
+	err = p.Prepare()
 	if err != nil {
 		return fmt.Errorf("error loading states for propsector %v: %v", p.ID(), err)
 	}

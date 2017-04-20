@@ -43,6 +43,7 @@ type RunnerFactory interface {
 }
 
 type Runner interface {
+	Prepare() error
 	Start()
 	Stop()
 	ID() uint64
@@ -166,6 +167,7 @@ func (rl *Reloader) startRunners(list map[uint64]Runner) {
 
 	logp.Info("Starting %v runners ...", len(list))
 	for id, runner := range list {
+		runner.Prepare()
 		runner.Start()
 		rl.registry.Add(id, runner)
 

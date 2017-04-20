@@ -14,6 +14,7 @@ import (
 	"github.com/elastic/beats/filebeat/harvester"
 	"github.com/elastic/beats/filebeat/input"
 	"github.com/elastic/beats/filebeat/input/file"
+	"github.com/elastic/beats/filebeat/registrar"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
 )
@@ -39,6 +40,8 @@ type Prospector struct {
 	registry      *harvesterRegistry
 	beatDone      chan struct{}
 	eventCounter  *sync.WaitGroup
+	registrar     *registrar.Registrar
+	prepared      bool
 }
 
 type Prospectorer interface {
@@ -50,7 +53,8 @@ type Outlet interface {
 	OnEvent(event *input.Event) bool
 }
 
-func NewProspector(cfg *common.Config, outlet Outlet, beatDone chan struct{}) (*Prospector, error) {
+// NewProspector instantiates a new prospector
+func NewProspector(cfg *common.Config, outlet Outlet, registrar *registrar.Registrar, beatDone chan struct{}) (*Prospector, error) {
 	prospector := &Prospector{
 		cfg:           cfg,
 		config:        defaultConfig,
@@ -66,6 +70,8 @@ func NewProspector(cfg *common.Config, outlet Outlet, beatDone chan struct{}) (*
 		registry:      newHarvesterRegistry(),
 		beatDone:      beatDone,
 		eventCounter:  &sync.WaitGroup{},
+		registrar:     registrar,
+		prepared:      false,
 	}
 
 	var err error
@@ -119,7 +125,16 @@ func (p *Prospector) LoadStates(states []file.State) error {
 	return nil
 }
 
+func (p *Prospector) Prepare() error {
+	if err := p.LoadStates(p.registrar.GetStates()); err != nil {
+		return err
+	}
+	p.prepared = true
+	return nil
+}
+
 func (p *Prospector) Start() {
+
 	p.wg.Add(1)
 	logp.Info("Starting prospector of type: %v; id: %v ", p.config.InputType, p.ID())
 
